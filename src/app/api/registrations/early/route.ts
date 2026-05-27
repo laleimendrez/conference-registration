@@ -37,6 +37,8 @@ export async function POST(req: Request) {
         paperTitle: body.paperTitle,
       },
       update: {
+        type: "EARLY",
+        status: "APPROVED",
         attendeeName: body.attendeeName,
         attendeeEmail: body.attendeeEmail,
         organization: body.organization,

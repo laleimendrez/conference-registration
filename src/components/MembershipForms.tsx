@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEFAULT_MEMBERSHIP_FEES, MEMBERSHIP_CERT_LABELS } from "@/lib/constants";
 import type { MembershipCertType } from "@prisma/client";
 
@@ -29,15 +29,30 @@ export function MembershipForms({
   const [type, setType] = useState<MembershipCertType>("INDIVIDUAL_PROFESSIONAL");
   const [membershipId, setMembershipId] = useState(memberships[0]?.id ?? "");
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
 
   const fee = DEFAULT_MEMBERSHIP_FEES[type] ?? 0;
   const needsOrg = type.startsWith("INSTITUTIONAL");
+  const selectedMembership = memberships.find((m) => m.id === membershipId);
+  const canPay = memberships.length > 0 && Boolean(membershipId);
+
+  useEffect(() => {
+    if (memberships.length === 0) {
+      setMembershipId("");
+      return;
+    }
+    if (!membershipId || !memberships.some((m) => m.id === membershipId)) {
+      setMembershipId(memberships[0].id);
+    }
+  }, [memberships, membershipId]);
 
   async function apply(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    setApplyLoading(true);
     setMessage("");
+    setIsError(false);
     const fd = new FormData(e.currentTarget);
     try {
       const res = await fetch("/api/membership/apply", {
@@ -47,25 +62,43 @@ export function MembershipForms({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setMessage(`Application created. Member ID: ${data.membership.memberId}. Submit payment below.`);
+      setMessage(
+        data.message ??
+          `Application created. Member ID: ${data.membership.memberId}. Submit payment on the right.`,
+      );
       window.location.reload();
     } catch (err) {
+      setIsError(true);
       setMessage(err instanceof Error ? err.message : "Failed");
     } finally {
-      setLoading(false);
+      setApplyLoading(false);
     }
   }
 
   async function pay(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!membershipId) {
-      setMessage("Apply for membership first");
+      setIsError(true);
+      setMessage("Step 1: Apply for membership first (left panel).");
       return;
     }
-    setLoading(true);
+    setPayLoading(true);
     setMessage("");
+    setIsError(false);
     const fd = new FormData(e.currentTarget);
     const file = fd.get("proof") as File;
+    if (!file?.size) {
+      setIsError(true);
+      setMessage("Please upload payment proof (image or PDF, max 5MB).");
+      setPayLoading(false);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setIsError(true);
+      setMessage("Proof file too large (max 5MB).");
+      setPayLoading(false);
+      return;
+    }
     try {
       const proofBase64 = await fileToBase64(file);
       const res = await fetch("/api/membership/payment", {
@@ -76,29 +109,39 @@ export function MembershipForms({
           method: fd.get("method"),
           transactionDate: fd.get("transactionDate"),
           transactionNo: fd.get("transactionNo"),
-          amount: fd.get("amount"),
+          amount: Number(fd.get("amount")),
           paymentFor: fd.get("paymentFor"),
           payeeName: fd.get("payeeName") || undefined,
           proofBase64,
           proofFileName: file.name,
-          proofMimeType: file.type,
+          proofMimeType: file.type || "application/octet-stream",
           isRenewal: fd.get("isRenewal") === "on",
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setMessage("Membership payment submitted for verification.");
+      setMessage("Payment submitted. An admin will verify it shortly.");
+      window.location.reload();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed");
+      setIsError(true);
+      setMessage(err instanceof Error ? err.message : "Payment failed");
     } finally {
-      setLoading(false);
+      setPayLoading(false);
     }
   }
 
   return (
     <div className="space-y-8">
       {message && (
-        <div className="p-4 rounded-xl bg-indigo-50 text-indigo-900 text-sm">{message}</div>
+        <div
+          className={`p-4 rounded-xl text-sm border ${
+            isError
+              ? "bg-red-50 text-red-900 border-red-100"
+              : "bg-indigo-50 text-indigo-900 border-indigo-100"
+          }`}
+        >
+          {message}
+        </div>
       )}
 
       {memberships.length > 0 && (
@@ -121,7 +164,8 @@ export function MembershipForms({
 
       <div className="grid lg:grid-cols-2 gap-8">
         <section className="p-6 bg-white rounded-2xl border">
-          <h2 className="font-bold mb-4">D. Apply for membership</h2>
+          <p className="text-xs font-semibold text-indigo-600 mb-2">Step 1</p>
+          <h2 className="font-bold mb-4">Apply for membership</h2>
           <form onSubmit={apply} className="space-y-3">
             <div>
               <label className="label">Membership type</label>
@@ -144,52 +188,101 @@ export function MembershipForms({
                 <input name="orgName" className="input-field" required />
               </div>
             )}
-            <button type="submit" className="btn-primary w-full" disabled={loading}>
-              Apply
+            <button type="submit" className="btn-primary w-full" disabled={applyLoading}>
+              {applyLoading ? "Applying…" : "Apply"}
             </button>
           </form>
         </section>
 
         <section className="p-6 bg-white rounded-2xl border">
+          <p className="text-xs font-semibold text-indigo-600 mb-2">Step 2</p>
           <h2 className="font-bold mb-4">Membership payment / renewal</h2>
-          <form onSubmit={pay} className="space-y-3">
-            <div>
-              <label className="label">Membership record</label>
-              <select
+          {!canPay ? (
+            <p className="text-sm text-slate-600">
+              Complete Step 1 first. After you apply, your membership will appear here for payment
+              upload.
+            </p>
+          ) : (
+            <form onSubmit={pay} className="space-y-3">
+              <div>
+                <label className="label">Membership record</label>
+                <select
+                  className="input-field"
+                  value={membershipId}
+                  onChange={(e) => setMembershipId(e.target.value)}
+                  required
+                >
+                  {memberships.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.memberId} — {m.status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Payment method</label>
+                <select name="method" className="input-field" required defaultValue="BANK">
+                  <option value="BANK">Bank</option>
+                  <option value="EWALLET">E-Wallet</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Transaction date</label>
+                <input
+                  name="transactionDate"
+                  type="date"
+                  className="input-field"
+                  required
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
+              </div>
+              <input
+                name="transactionNo"
+                placeholder="Transaction #"
                 className="input-field"
-                value={membershipId}
-                onChange={(e) => setMembershipId(e.target.value)}
                 required
-              >
-                <option value="">Select…</option>
-                {memberships.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.memberId} — {m.status}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Payment method</label>
-              <select name="method" className="input-field" required>
-                <option value="BANK">Bank</option>
-                <option value="EWALLET">E-Wallet</option>
-              </select>
-            </div>
-            <input name="transactionDate" type="date" className="input-field" required />
-            <input name="transactionNo" placeholder="Transaction #" className="input-field" required />
-            <input name="amount" type="number" placeholder="Amount" className="input-field" required />
-            <input name="paymentFor" placeholder="Payment for" className="input-field" required />
-            <input name="payeeName" placeholder="Payee name (OR)" className="input-field" />
-            <label className="flex items-center gap-2 text-sm">
-              <input name="isRenewal" type="checkbox" />
-              This is a renewal payment
-            </label>
-            <input name="proof" type="file" accept="image/*,.pdf" className="input-field" required />
-            <button type="submit" className="btn-primary w-full" disabled={loading}>
-              Submit payment
-            </button>
-          </form>
+              />
+              <input
+                name="amount"
+                type="number"
+                placeholder="Amount (PHP)"
+                className="input-field"
+                required
+                min={1}
+                step="0.01"
+                defaultValue={selectedMembership ? fee : undefined}
+              />
+              <input
+                name="paymentFor"
+                placeholder="Payment for"
+                className="input-field"
+                required
+                defaultValue={
+                  selectedMembership
+                    ? MEMBERSHIP_CERT_LABELS[selectedMembership.type]
+                    : undefined
+                }
+              />
+              <input name="payeeName" placeholder="Payee name (OR)" className="input-field" />
+              <label className="flex items-center gap-2 text-sm">
+                <input name="isRenewal" type="checkbox" />
+                This is a renewal payment
+              </label>
+              <div>
+                <label className="label">Upload proof (image/PDF, max 5MB)</label>
+                <input
+                  name="proof"
+                  type="file"
+                  accept="image/*,.pdf,application/pdf"
+                  className="input-field"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn-primary w-full" disabled={payLoading}>
+                {payLoading ? "Submitting…" : "Submit payment"}
+              </button>
+            </form>
+          )}
         </section>
       </div>
     </div>

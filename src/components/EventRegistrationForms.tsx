@@ -19,6 +19,7 @@ export function EventRegistrationForms({ events }: { events: Event[] }) {
   const [selected, setSelected] = useState(events[0]?.id ?? "");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const event = events.find((e) => e.id === selected);
@@ -27,6 +28,7 @@ export function EventRegistrationForms({ events }: { events: Event[] }) {
     e.preventDefault();
     setLoading(true);
     setMessage("");
+    setIsError(false);
     setQrUrl(null);
     const fd = new FormData(e.currentTarget);
     try {
@@ -40,6 +42,7 @@ export function EventRegistrationForms({ events }: { events: Event[] }) {
       setQrUrl(data.qrDataUrl);
       setMessage("Early registration complete! Save your QR code below.");
     } catch (err) {
+      setIsError(true);
       setMessage(err instanceof Error ? err.message : "Failed");
     } finally {
       setLoading(false);
@@ -50,10 +53,18 @@ export function EventRegistrationForms({ events }: { events: Event[] }) {
     e.preventDefault();
     setLoading(true);
     setMessage("");
+    setIsError(false);
     const fd = new FormData(e.currentTarget);
     const file = fd.get("proof") as File;
     if (!file?.size) {
-      setMessage("Please upload payment proof");
+      setIsError(true);
+      setMessage("Please upload payment proof (image or PDF, max 5MB).");
+      setLoading(false);
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setIsError(true);
+      setMessage("Proof file too large (max 5MB).");
       setLoading(false);
       return;
     }
@@ -71,19 +82,21 @@ export function EventRegistrationForms({ events }: { events: Event[] }) {
           method: fd.get("method"),
           transactionDate: fd.get("transactionDate"),
           transactionNo: fd.get("transactionNo"),
-          amount: fd.get("amount"),
+          amount: Number(fd.get("amount")),
           paymentFor: fd.get("paymentFor"),
           payeeName: fd.get("payeeName") || undefined,
           proofBase64,
           proofFileName: file.name,
-          proofMimeType: file.type,
+          proofMimeType: file.type || "application/octet-stream",
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setMessage("Payment submitted. Awaiting admin verification. QR will be available after approval.");
+      window.location.reload();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed");
+      setIsError(true);
+      setMessage(err instanceof Error ? err.message : "Payment failed");
     } finally {
       setLoading(false);
     }
@@ -122,7 +135,13 @@ export function EventRegistrationForms({ events }: { events: Event[] }) {
       </div>
 
       {message && (
-        <div className="p-4 rounded-xl bg-indigo-50 text-indigo-900 text-sm border border-indigo-100">
+        <div
+          className={`p-4 rounded-xl text-sm border ${
+            isError
+              ? "bg-red-50 text-red-900 border-red-100"
+              : "bg-indigo-50 text-indigo-900 border-indigo-100"
+          }`}
+        >
           {message}
         </div>
       )}
@@ -166,7 +185,13 @@ export function EventRegistrationForms({ events }: { events: Event[] }) {
                 <option value="EWALLET">E-Wallet</option>
               </select>
             </div>
-            <Field name="transactionDate" label="Transaction date" type="date" required />
+            <Field
+              name="transactionDate"
+              label="Transaction date"
+              type="date"
+              required
+              defaultValue={new Date().toISOString().slice(0, 10)}
+            />
             <Field name="transactionNo" label="Transaction number" required />
             <Field name="amount" label="Amount (PHP)" type="number" required />
             <Field name="paymentFor" label="Payment for" required />
@@ -190,18 +215,27 @@ function Field({
   label,
   type = "text",
   required,
+  defaultValue,
 }: {
   name: string;
   label: string;
   type?: string;
   required?: boolean;
+  defaultValue?: string;
 }) {
   return (
     <div>
       <label className="label" htmlFor={name}>
         {label}
       </label>
-      <input id={name} name={name} type={type} className="input-field" required={required} />
+      <input
+        id={name}
+        name={name}
+        type={type}
+        className="input-field"
+        required={required}
+        defaultValue={defaultValue}
+      />
     </div>
   );
 }

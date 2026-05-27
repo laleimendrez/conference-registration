@@ -49,8 +49,9 @@ export function AdminPanel({
       body: JSON.stringify({ action, kind }),
     });
     const data = await res.json();
-    if (!res.ok) setMsg(data.error);
-    else {
+    if (!res.ok) {
+      setMsg(data.error ?? `Failed to ${action} payment`);
+    } else {
       setMsg(`${kind} payment ${action}d`);
       window.location.reload();
     }

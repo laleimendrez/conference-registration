@@ -2,23 +2,24 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
+import { formatApiError, parseProofBase64, parseTransactionDate } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
-  eventId: z.string(),
+  eventId: z.string().min(1),
   attendeeName: z.string().min(2),
   attendeeEmail: z.string().email(),
   organization: z.string().optional(),
   paperTitle: z.string().optional(),
   method: z.enum(["BANK", "EWALLET"]),
-  transactionDate: z.string(),
+  transactionDate: z.string().min(1),
   transactionNo: z.string().min(3),
   amount: z.coerce.number().positive(),
   paymentFor: z.string().min(3),
   payeeName: z.string().optional(),
-  proofBase64: z.string(),
-  proofFileName: z.string(),
-  proofMimeType: z.string(),
+  proofBase64: z.string().min(1),
+  proofFileName: z.string().min(1),
+  proofMimeType: z.string().min(1),
 });
 
 export async function POST(req: Request) {
@@ -28,12 +29,16 @@ export async function POST(req: Request) {
   try {
     const body = schema.parse(await req.json());
     const event = await prisma.event.findUnique({ where: { id: body.eventId } });
-    if (!event?.active) return NextResponse.json({ error: "Event not found" }, { status: 404 });
-
-    const proofData = Buffer.from(body.proofBase64, "base64");
-    if (proofData.length > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "Proof file too large (max 5MB)" }, { status: 400 });
+    if (!event?.active) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
+
+    const { proofData, proofMimeType, proofFileName } = parseProofBase64(
+      body.proofBase64,
+      body.proofMimeType,
+      body.proofFileName,
+    );
+    const transactionDate = parseTransactionDate(body.transactionDate);
 
     const qrCode = `REG-${uuidv4().slice(0, 8).toUpperCase()}`;
 
@@ -68,35 +73,43 @@ export async function POST(req: Request) {
           registrationId: reg.id,
           method: body.method,
           status: "PENDING",
-          transactionDate: new Date(body.transactionDate),
-          transactionNo: body.transactionNo,
+          transactionDate,
+          transactionNo: body.transactionNo.trim(),
           amount: body.amount,
-          paymentFor: body.paymentFor,
-          payeeName: body.payeeName,
-          proofFileName: body.proofFileName,
-          proofMimeType: body.proofMimeType,
+          paymentFor: body.paymentFor.trim(),
+          payeeName: body.payeeName?.trim() || null,
+          proofFileName,
+          proofMimeType,
           proofData,
         },
         update: {
           method: body.method,
           status: "PENDING",
-          transactionDate: new Date(body.transactionDate),
-          transactionNo: body.transactionNo,
+          transactionDate,
+          transactionNo: body.transactionNo.trim(),
           amount: body.amount,
-          paymentFor: body.paymentFor,
-          payeeName: body.payeeName,
-          proofFileName: body.proofFileName,
-          proofMimeType: body.proofMimeType,
+          paymentFor: body.paymentFor.trim(),
+          payeeName: body.payeeName?.trim() || null,
+          proofFileName,
+          proofMimeType,
           proofData,
+          reviewedAt: null,
+          adminNotes: null,
         },
       });
 
       return { reg, payment };
     });
 
-    return NextResponse.json({ ok: true, registration: result.reg, payment: { id: result.payment.id, status: result.payment.status } });
+    return NextResponse.json({
+      ok: true,
+      registration: result.reg,
+      payment: { id: result.payment.id, status: result.payment.status },
+    });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Payment submission failed";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return NextResponse.json(
+      { error: formatApiError(e, "Payment submission failed") },
+      { status: 400 },
+    );
   }
 }

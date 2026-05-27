@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
+import { formatApiError, parseProofBase64, parseTransactionDate } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
-  membershipId: z.string(),
+  membershipId: z.string().min(1),
   method: z.enum(["BANK", "EWALLET"]),
-  transactionDate: z.string(),
+  transactionDate: z.string().min(1),
   transactionNo: z.string().min(3),
   amount: z.coerce.number().positive(),
   paymentFor: z.string().min(3),
   payeeName: z.string().optional(),
-  proofBase64: z.string(),
-  proofFileName: z.string(),
-  proofMimeType: z.string(),
+  proofBase64: z.string().min(1),
+  proofFileName: z.string().min(1),
+  proofMimeType: z.string().min(1),
   isRenewal: z.boolean().optional(),
 });
 
@@ -26,35 +27,63 @@ export async function POST(req: Request) {
     const membership = await prisma.membership.findFirst({
       where: { id: body.membershipId, userId: session.id },
     });
-    if (!membership) return NextResponse.json({ error: "Membership not found" }, { status: 404 });
+    if (!membership) {
+      return NextResponse.json({ error: "Membership not found" }, { status: 404 });
+    }
 
-    const proofData = Buffer.from(body.proofBase64, "base64");
-    const payment = await prisma.membershipPayment.create({
-      data: {
-        userId: session.id,
-        membershipId: membership.id,
-        method: body.method,
-        status: "PENDING",
-        transactionDate: new Date(body.transactionDate),
-        transactionNo: body.transactionNo,
-        amount: body.amount,
-        paymentFor: body.paymentFor,
-        payeeName: body.payeeName,
-        proofFileName: body.proofFileName,
-        proofMimeType: body.proofMimeType,
-        proofData,
-        isRenewal: body.isRenewal ?? false,
-      },
+    const { proofData, proofMimeType, proofFileName } = parseProofBase64(
+      body.proofBase64,
+      body.proofMimeType,
+      body.proofFileName,
+    );
+    const transactionDate = parseTransactionDate(body.transactionDate);
+
+    const paymentData = {
+      method: body.method,
+      status: "PENDING" as const,
+      transactionDate,
+      transactionNo: body.transactionNo.trim(),
+      amount: body.amount,
+      paymentFor: body.paymentFor.trim(),
+      payeeName: body.payeeName?.trim() || null,
+      proofFileName,
+      proofMimeType,
+      proofData,
+      isRenewal: body.isRenewal ?? false,
+      reviewedAt: null,
+      adminNotes: null,
+    };
+
+    const existingPending = await prisma.membershipPayment.findFirst({
+      where: { membershipId: membership.id, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
     });
 
-    await prisma.membership.update({
-      where: { id: membership.id },
-      data: { status: "PENDING_PAYMENT" },
-    });
+    const payment = existingPending
+      ? await prisma.membershipPayment.update({
+          where: { id: existingPending.id },
+          data: paymentData,
+        })
+      : await prisma.membershipPayment.create({
+          data: {
+            userId: session.id,
+            membershipId: membership.id,
+            ...paymentData,
+          },
+        });
+
+    if (membership.status !== "ACTIVE") {
+      await prisma.membership.update({
+        where: { id: membership.id },
+        data: { status: "PENDING_PAYMENT" },
+      });
+    }
 
     return NextResponse.json({ payment: { id: payment.id, status: payment.status } });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Payment failed";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return NextResponse.json(
+      { error: formatApiError(e, "Payment failed") },
+      { status: 400 },
+    );
   }
 }

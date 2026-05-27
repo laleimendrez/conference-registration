@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildQrPayload, generateQrDataUrl } from "@/lib/qr";
-import { MEMBERSHIP_DURATION_YEARS } from "@/lib/constants";
+import { membershipDatesOnApproval } from "@/lib/membership-dates";
+import { formatApiError } from "@/lib/payment";
 
 const schema = z.object({
   action: z.enum(["approve", "reject"]),
@@ -62,27 +63,44 @@ export async function PATCH(
     });
 
     if (body.action === "approve") {
-      const years = MEMBERSHIP_DURATION_YEARS[payment.membership.type];
-      const start = new Date();
-      const expiry =
-        years === null || years === undefined
-          ? null
-          : new Date(start.getFullYear() + years, start.getMonth(), start.getDate());
-
+      const { startDate, expiryDate } = membershipDatesOnApproval(
+        payment.membership,
+        payment.membership.type,
+        payment.isRenewal,
+      );
       await prisma.membership.update({
         where: { id: payment.membershipId },
         data: {
           status: "ACTIVE",
-          startDate: start,
-          expiryDate: expiry,
+          startDate,
+          expiryDate,
           renewalSent: false,
         },
       });
+    } else {
+      const mem = payment.membership;
+      if (mem.status === "PENDING_PAYMENT") {
+        const otherPending = await prisma.membershipPayment.count({
+          where: {
+            membershipId: mem.id,
+            status: "PENDING",
+            id: { not: payment.id },
+          },
+        });
+        if (otherPending === 0) {
+          await prisma.membership.update({
+            where: { id: mem.id },
+            data: { status: "PENDING_PAYMENT" },
+          });
+        }
+      }
     }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Update failed";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return NextResponse.json(
+      { error: formatApiError(e, "Update failed") },
+      { status: 400 },
+    );
   }
 }

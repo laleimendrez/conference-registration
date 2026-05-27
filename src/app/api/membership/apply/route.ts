@@ -30,6 +30,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Organization name required" }, { status: 400 });
     }
 
+    const fee = DEFAULT_MEMBERSHIP_FEES[body.type] ?? 0;
+
+    const existing = await prisma.membership.findFirst({
+      where: { userId: session.id, type: body.type },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existing?.status === "ACTIVE") {
+      return NextResponse.json(
+        { error: "You already have an active membership of this type." },
+        { status: 400 },
+      );
+    }
+
+    if (existing?.status === "PENDING_PAYMENT") {
+      return NextResponse.json({
+        membership: existing,
+        suggestedFee: fee,
+        message: "You already applied — use the payment form on the right.",
+      });
+    }
+
     const memberId = `MEM-${Date.now().toString(36).toUpperCase()}`;
     const membership = await prisma.membership.create({
       data: {
@@ -41,7 +63,6 @@ export async function POST(req: Request) {
       },
     });
 
-    const fee = DEFAULT_MEMBERSHIP_FEES[body.type] ?? 0;
     return NextResponse.json({ membership, suggestedFee: fee });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Application failed";
