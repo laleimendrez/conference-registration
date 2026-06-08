@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AdminPanel } from "@/components/AdminPanel";
@@ -30,41 +29,51 @@ export default async function AdminPage() {
     ]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="dashboard-shell dashboard-layout">
       <DashboardNav user={session} />
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-2">Admin console</h1>
-        <p className="text-slate-600 text-sm mb-2">
-          Total memberships in database: <strong>{membershipCount}</strong>
-        </p>
-        <Link href="/dashboard" className="text-sm text-indigo-600 hover:underline mb-8 inline-block">
-          ← Dashboard
-        </Link>
+      <main className="w-full px-5 py-8 md:px-8 md:py-10">
+        <section className="mb-8">
+          <p className="section-kicker">Admin console</p>
+          <h1 className="mt-2 text-3xl font-black text-slate-950">Operations control center</h1>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            Review payments, issue certificates, and manage renewal reminders.
+            Total memberships in database: <strong>{membershipCount}</strong>.
+          </p>
+        </section>
+
         <AdminPanel
-          eventPayments={eventPayments.map((p) => ({
-            id: p.id,
-            transactionNo: p.transactionNo,
-            amount: p.amount.toString(),
-            status: p.status,
-            payeeName: p.payeeName,
+          eventPayments={eventPayments.map((payment) => ({
+            id: payment.id,
+            transactionNo: payment.transactionNo,
+            amount: payment.amount.toString(),
+            status: payment.status,
+            payeeName: payment.payeeName,
             registration: {
-              attendeeName: p.registration.attendeeName,
-              qrCode: p.registration.qrCode,
+              attendeeName: payment.registration.attendeeName,
+              qrCode: payment.registration.qrCode,
             },
+            createdAt: payment.createdAt.toISOString(),
+            reviewedAt: payment.reviewedAt?.toISOString() ?? null,
           }))}
-          membershipPayments={membershipPayments.map((p) => ({
-            id: p.id,
-            transactionNo: p.transactionNo,
-            amount: p.amount.toString(),
-            status: p.status,
-            isRenewal: p.isRenewal,
-            membership: { memberId: p.membership.memberId },
+          membershipPayments={membershipPayments.map((payment) => ({
+            id: payment.id,
+            transactionNo: payment.transactionNo,
+            amount: payment.amount.toString(),
+            status: payment.status,
+            isRenewal: payment.isRenewal,
+            membership: { memberId: payment.membership.memberId },
+            createdAt: payment.createdAt.toISOString(),
+            reviewedAt: payment.reviewedAt?.toISOString() ?? null,
           }))}
-          certificates={certificates.map((c) => ({
-            id: c.id,
-            type: c.type,
-            status: c.status,
-            recipientName: c.recipientName,
+          certificates={certificates.map((certificate) => ({
+            id: certificate.id,
+            type: certificate.type,
+            status: certificate.status,
+            recipientName: certificate.recipientName,
+            paperTitle: certificate.paperTitle,
+            createdAt: certificate.createdAt.toISOString(),
+            updatedAt: certificate.updatedAt.toISOString(),
+            issuedAt: certificate.issuedAt?.toISOString() ?? null,
           }))}
         />
       </main>

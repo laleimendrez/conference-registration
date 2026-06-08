@@ -11,9 +11,9 @@ export default async function DashboardLayout({
   if (!session) redirect("/login");
 
   return (
-    <div className="dashboard-shell">
+    <div className="dashboard-shell dashboard-layout">
       <DashboardNav user={session} />
-      <main className="mx-auto max-w-7xl px-5 py-8 md:py-10">{children}</main>
+      <main className="w-full px-5 py-8 md:px-8 md:py-10">{children}</main>
     </div>
   );
 }

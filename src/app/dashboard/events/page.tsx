@@ -66,12 +66,22 @@ export default async function EventsPage() {
                     <div className="mt-4 flex flex-col items-start gap-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={qr.qrDataUrl} alt="Registration QR" className="w-40 rounded-xl border bg-white p-2" />
-                      <a
-                        href={`/verify/${registration.qrCode}`}
-                        className="text-sm font-bold text-indigo-600 hover:underline"
-                      >
-                        Open verification link
-                      </a>
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href={`/verify/${registration.qrCode}`}
+                          className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700"
+                        >
+                          Open verification
+                        </a>
+                        <a
+                          href={`/api/registrations/ticket/${registration.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-700"
+                        >
+                          Open QR ticket
+                        </a>
+                      </div>
                     </div>
                   )}
                 </div>

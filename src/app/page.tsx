@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
+import { HowItWorks } from "@/components/HowItWorks";
 
 const features = [
   {
@@ -31,29 +32,6 @@ const features = [
     label: "06",
     title: "Admin portal",
     desc: "Approve payments, manage registrations, issue certificates, and monitor renewal activity.",
-  },
-];
-
-const workflow = [
-  {
-    title: "Create the event record",
-    badge: "Setup",
-    desc: "Organizers prepare registration details, certificate options, membership categories, and payment instructions.",
-  },
-  {
-    title: "Register and submit proof",
-    badge: "Participant",
-    desc: "Participants complete their profile, register for the event, and upload payment proof when required.",
-  },
-  {
-    title: "Review and approve",
-    badge: "Admin",
-    desc: "Administrators verify payment submissions, monitor registration status, and keep records organized.",
-  },
-  {
-    title: "Issue QR codes and certificates",
-    badge: "Release",
-    desc: "Approved participants receive check-in support, certificate updates, and membership renewal guidance.",
   },
 ];
 
@@ -106,7 +84,7 @@ export default async function HomePage() {
               About
             </a>
             <a href="#how-it-works" className="nav-pill">
-              Guide
+              How it works
             </a>
             <a href="#faqs" className="nav-pill">
               FAQs
@@ -192,7 +170,7 @@ export default async function HomePage() {
         <section id="about" className="mx-auto max-w-6xl px-5 py-16 md:py-20">
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="section-kicker">Intro to the service</p>
+              <p className="section-kicker">Services provided</p>
               <h2 className="mt-3 max-w-2xl text-3xl font-black text-slate-950 md:text-4xl">
                 Built for smooth conference operations from registration to release.
               </h2>
@@ -216,75 +194,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="how-section px-5 py-16 text-white md:py-20">
-          <div className="mx-auto max-w-6xl">
-            <div className="mx-auto mb-10 max-w-3xl text-center">
-              <p className="section-kicker section-kicker-light">How it works</p>
-              <h2 className="mt-3 text-3xl font-black leading-tight md:text-5xl">
-                Everything you need to manage conference registration.
-              </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">
-                A guided workflow connects participants, administrators, payment review,
-                certificates, and membership tracking from start to finish.
-              </p>
-            </div>
-
-            <div className="grid items-center gap-8 lg:grid-cols-[0.88fr_1.12fr]">
-              <div className="space-y-4">
-                {workflow.map((step, index) => (
-                  <article key={step.title} className={`workflow-card ${index === 0 ? "workflow-card-active" : ""}`}>
-                    <span className="workflow-number">{index + 1}</span>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-black text-slate-100">{step.title}</h3>
-                        <span className="workflow-badge">{step.badge}</span>
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-slate-400">{step.desc}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-
-              <div className="portal-preview">
-                <div className="preview-topbar">
-                  <span className="bg-pink-400" />
-                  <span className="bg-indigo-300" />
-                  <span className="bg-cyan-300" />
-                  <p>conference.portal/registration</p>
-                </div>
-                <div className="preview-body">
-                  <div className="preview-stats">
-                    {[
-                      ["Registrations", "248"],
-                      ["Pending review", "23"],
-                      ["Certificates", "36"],
-                    ].map(([label, value]) => (
-                      <div key={label}>
-                        <p>{label}</p>
-                        <strong>{value}</strong>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="preview-table">
-                    {[
-                      ["Early registration", "Open", "Live"],
-                      ["Payment proof", "Review", "Admin"],
-                      ["QR check-in", "Ready", "Event"],
-                      ["Certificate request", "Queued", "Office"],
-                      ["Membership renewal", "Scheduled", "Email"],
-                    ].map(([name, status, owner]) => (
-                      <div key={name}>
-                        <span>{name}</span>
-                        <strong>{status}</strong>
-                        <em>{owner}</em>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <HowItWorks />
 
         <section id="faqs" className="mx-auto max-w-4xl px-5 py-16 md:py-20">
           <div className="mb-8 text-center">
@@ -308,16 +218,16 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section id="contact" className="contact-section px-5 py-16 text-white md:py-20">
+        <section id="contact" className="contact-section px-5 py-16 md:py-20">
           <div className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-[0.95fr_1.05fr]">
             <div>
-              <p className="inline-flex rounded-full border border-indigo-300/40 bg-indigo-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-indigo-100">
+              <p className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-indigo-600">
                 Contact us
               </p>
-              <h2 className="mt-7 text-4xl font-black leading-tight md:text-5xl">
+              <h2 className="mt-7 text-4xl font-black leading-tight text-slate-950 md:text-5xl">
                 Let&apos;s build a smoother registration experience.
               </h2>
-              <p className="mt-5 max-w-xl text-base leading-8 text-slate-300">
+              <p className="mt-5 max-w-xl text-base leading-8 text-slate-600">
                 Have questions about registration flow, certificates, membership
                 tracking, or deployment? Send a message and we will help you move forward.
               </p>
@@ -331,8 +241,8 @@ export default async function HomePage() {
                   <div key={title} className="flex items-start gap-4">
                     <span className="contact-icon contact-icon-indigo">{index + 1}</span>
                     <div>
-                      <h3 className="font-black text-slate-100">{title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
+                      <h3 className="font-black text-slate-950">{title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{detail}</p>
                     </div>
                   </div>
                 ))}
@@ -418,11 +328,9 @@ export default async function HomePage() {
               <a href="#contact" className="hover:text-white">
                 Contact Us
               </a>
-              {!session && (
-                <Link href="/login" className="hover:text-white">
-                  Sign in
-                </Link>
-              )}
+              <Link href={primaryHref} className="hover:text-white">
+                Get started
+              </Link>
             </nav>
           </div>
         </section>
