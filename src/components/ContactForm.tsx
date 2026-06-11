@@ -43,40 +43,41 @@ export function ContactForm() {
 
   if (status === "success") {
     return (
-      <div className="contact-card flex flex-col items-center justify-center gap-6 text-center min-h-[380px] py-12">
-        {/* Animated checkmark */}
+      <div className="w-full max-w-xl mx-auto rounded-3xl bg-[#1e2330] border border-slate-800 p-8 flex flex-col items-center justify-center gap-6 text-center min-h-[440px] shadow-2xl transition-all duration-300">
+        {/* Modern Layered Success Badge */}
         <div className="relative flex items-center justify-center">
-          <div className="absolute h-24 w-24 rounded-full bg-indigo-100 animate-ping opacity-20" />
-          <div className="relative grid h-20 w-20 place-items-center rounded-full bg-indigo-600 shadow-lg shadow-indigo-600/30">
+          <div className="absolute h-24 w-24 rounded-full bg-indigo-500/20 animate-ping duration-1000" />
+          <div className="absolute h-20 w-20 rounded-full bg-indigo-500/10 scale-125" />
+          <div className="relative grid h-16 w-16 place-items-center rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-xl shadow-indigo-500/30">
             <svg
-              className="h-9 w-9 text-white"
+              className="h-8 w-8 text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              strokeWidth={2.5}
+              strokeWidth={3}
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         </div>
 
-        {/* Text */}
-        <div className="space-y-2">
-          <h3 className="text-2xl font-black text-slate-950">Message sent!</h3>
-          <p className="text-sm leading-7 text-slate-500 max-w-xs mx-auto">
-            Thanks for reaching out. Check your inbox — we've sent you a confirmation and will follow up within 24 hours.
+        {/* Text Details */}
+        <div className="space-y-3">
+          <h3 className="text-3xl font-black tracking-tight text-white">Message sent!</h3>
+          <p className="text-sm leading-relaxed text-slate-400 max-w-sm mx-auto">
+            Thanks for reaching out. Check your inbox — we&apos;ve sent you a confirmation and will follow up within 24 hours.
           </p>
         </div>
 
-        {/* Divider */}
-        <div className="w-16 h-px bg-slate-200" />
+        {/* Minimal Decorative Line */}
+        <div className="w-12 h-0.5 rounded-full bg-slate-700/60 my-2" />
 
-        {/* Reset */}
+        {/* Back Button Action */}
         <button
           onClick={() => setStatus("idle")}
-          className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-all hover:gap-3 group"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           Send another message
@@ -87,6 +88,15 @@ export function ContactForm() {
 
   return (
     <form className="contact-card" onSubmit={handleSubmit} noValidate>
+      <div className="-mt-2 mb-2">
+        <h2 className="text-2xl font-black tracking-tight text-white leading-none mb-0.5">
+          Get in Touch
+        </h2>
+        <p className="text-xs font-medium text-slate-400 m-0 p-0">
+          Have questions? We’d love to hear from you.
+        </p>
+      </div>
+
       <div>
         <label className="contact-label" htmlFor="contact-name">
           Name

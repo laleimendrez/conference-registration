@@ -3,17 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+// Dinagdagan natin ng metadata ang bawat bansa para sa phone validation at tracking
 const countries = [
-  { code: "PH", name: "Philippines" },
-  { code: "US", name: "United States" },
-  { code: "SG", name: "Singapore" },
-  { code: "MY", name: "Malaysia" },
-  { code: "ID", name: "Indonesia" },
-  { code: "TH", name: "Thailand" },
-  { code: "VN", name: "Vietnam" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "CN", name: "China" },
+  { code: "PH", name: "Philippines", dialCode: "+63", minLen: 10, maxLen: 13, placeholder: "+63 912 345 6789" },
+  { code: "US", name: "United States", dialCode: "+1", minLen: 10, maxLen: 12, placeholder: "+1 202 555 0143" },
+  { code: "SG", name: "Singapore", dialCode: "+65", minLen: 8, maxLen: 11, placeholder: "+65 6123 4567" },
+  { code: "MY", name: "Malaysia", dialCode: "+60", minLen: 9, maxLen: 12, placeholder: "+60 12-345 6789" },
+  { code: "ID", name: "Indonesia", dialCode: "+62", minLen: 9, maxLen: 14, placeholder: "+62 812-3456-789" },
+  { code: "TH", name: "Thailand", dialCode: "+66", minLen: 9, maxLen: 12, placeholder: "+66 81 234 5678" },
+  { code: "VN", name: "Vietnam", dialCode: "+84", minLen: 9, maxLen: 12, placeholder: "+84 91 234 5678" },
+  { code: "JP", name: "Japan", dialCode: "+81", minLen: 9, maxLen: 13, placeholder: "+81 90-1234-5678" },
+  { code: "KR", name: "South Korea", dialCode: "+82", minLen: 9, maxLen: 12, placeholder: "+82 10-1234-5678" },
+  { code: "CN", name: "China", dialCode: "+86", minLen: 11, maxLen: 14, placeholder: "+86 139 1234 5678" },
 ];
 
 type ProfileUser = {
@@ -38,6 +39,9 @@ export function ProfileForm({ user }: { user: ProfileUser }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // State para ma-track kung anong bansa ang pinili ng user ngayon
+  const [currentCountryCode, setCurrentCountryCode] = useState(user.country || "PH");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -59,7 +63,8 @@ export function ProfileForm({ user }: { user: ProfileUser }) {
     router.refresh();
   }
 
-  const selectedCountry = countries.find((country) => country.code === user.country) ?? countries[0];
+  // Hanapin ang active country configuration base sa state
+  const activeCountry = countries.find((c) => c.code === currentCountryCode) ?? countries[0];
 
   return (
     <section className="dashboard-card overflow-hidden">
@@ -108,7 +113,28 @@ export function ProfileForm({ user }: { user: ProfileUser }) {
             <label className="label" htmlFor="phone">
               Phone
             </label>
-            <input id="phone" name="phone" className="input-field" defaultValue={user.phone ?? ""} />
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              className="input-field"
+              defaultValue={user.phone ?? ""}
+              placeholder={activeCountry.placeholder}
+              // Gumagamit na ngayon ng dynamic min/max length at patterns depende sa bansa
+              minLength={activeCountry.minLen}
+              maxLength={activeCountry.maxLen}
+              pattern="[+\d\s\-().]{7,20}"
+              title={`Enter a valid phone number for ${activeCountry.name}. Min length: ${activeCountry.minLen}, Max length: ${activeCountry.maxLen}`}
+              onKeyDown={(e) => {
+                const allowed = /[0-9+\-\s().]/;
+                if (
+                  !allowed.test(e.key) &&
+                  !["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)
+                ) {
+                  e.preventDefault();
+                }
+              }}
+            />
           </div>
         </div>
 
@@ -116,7 +142,13 @@ export function ProfileForm({ user }: { user: ProfileUser }) {
           <label className="label" htmlFor="country">
             Country / Region
           </label>
-          <select id="country" name="country" className="input-field" defaultValue={selectedCountry.code}>
+          <select 
+            id="country" 
+            name="country" 
+            className="input-field" 
+            value={currentCountryCode}
+            onChange={(e) => setCurrentCountryCode(e.target.value)} // Ina-update ang state tuwing may pipiliing bansa
+          >
             {countries.map((country) => (
               <option key={country.code} value={country.code}>
                 {country.code} - {country.name}

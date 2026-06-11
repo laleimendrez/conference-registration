@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 const updateSchema = z.object({
   name: z.string().min(2),
   organization: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().regex(/^[+\d\s\-().]{0,20}$/, "Phone number can only contain digits, spaces, +, -, and parentheses").optional(),
   country: z.string().min(2).max(2),
 });
 
