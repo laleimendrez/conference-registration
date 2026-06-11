@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { HowItWorks } from "@/components/HowItWorks";
+import { ContactForm } from "@/components/ContactForm";
 
 const features = [
   {
@@ -249,39 +250,8 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <form className="contact-card">
-              <div>
-                <label className="contact-label" htmlFor="contact-name">
-                  Name
-                </label>
-                <input id="contact-name" className="contact-field" placeholder="Your name" />
-              </div>
-
-              <div>
-                <label className="contact-label" htmlFor="contact-email">
-                  Email
-                </label>
-                <input id="contact-email" type="email" className="contact-field" placeholder="you@example.com" />
-              </div>
-
-              <div>
-                <label className="contact-label" htmlFor="contact-message">
-                  Message
-                </label>
-                <textarea
-                  id="contact-message"
-                  className="contact-field min-h-32 resize-none"
-                  placeholder="Tell us what you need help with."
-                />
-              </div>
-
-              <button type="button" className="contact-submit">
-                Send message -&gt;
-              </button>
-              <p className="text-center text-xs font-semibold text-slate-500">
-                We usually respond within 24 hours.
-              </p>
-            </form>
+            <ContactForm />
+            
           </div>
         </section>
       </main>
